@@ -1,0 +1,51 @@
+name: Build and Deploy
+
+parameters:
+  image_repository:
+    description: 'The repository for the Docker image'
+    required: true
+
+  image_tag:
+    description: 'The tag for the Docker image'
+    required: true
+    default: 'latest'
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+    permissions:
+      contents: read
+      packages: write
+
+    services:
+      docker:
+        image: docker:20.10.11
+        options: --entrypoint "sleep 3000" # keep the service running for 3000 seconds
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          server-id: github
+          settings-path: ${{ github.workspace }}
+
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml
+
+      - name: Build Docker image
+        run: docker build -t ${{ parameters.image_repository }}:${{ parameters.image_tag}} .
+
+      # Add steps for deploying the Docker image, e.g., pushing to a container registry or deploying to a platform
